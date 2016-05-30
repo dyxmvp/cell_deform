@@ -62,16 +62,14 @@ int X0_def = 0;
 int Xlength_def = 0;
 int Y0_def = 0;
 int Ylength_def = 0;
-int Threshold_Deform = 0;
-int Morph_Operator_def = 0;
-int Morph_Elem_def = 0;
-int Morph_Size_def = 0;
+int YM = 0;
+int wall = 0;
 
 //
 long double const PI = 3.14159265358979323846;
 
 //
-PSTR imageName = "AT1_450uLmin_M80S40_Step_r100_30_100000fps1.cine";// MMM "Z:\\Yanxiang\\2015\\11262015\\1\\231_450uLmin_M80S40_Step_r100_30_100000fps.cine"; //"CHO_450uLmin_M80S40_Step_r100_30_100000fps.cine";//"Z:\\Yanxiang\\2015\\11262015\\1\\231_450uLmin_M80S40_Step_r100_30_100000fps.cine"; //"t11294.cine";
+PSTR imageName = "test.cine";// MMM "Z:\\Yanxiang\\2015\\11262015\\1\\231_450uLmin_M80S40_Step_r100_30_100000fps.cine"; //"CHO_450uLmin_M80S40_Step_r100_30_100000fps.cine";//"Z:\\Yanxiang\\2015\\11262015\\1\\231_450uLmin_M80S40_Step_r100_30_100000fps.cine"; //"t11294.cine";
 int imageN = 0;
 int image1 = 0;
 
@@ -131,15 +129,13 @@ int main(int argc, char** argv)
 	// Read parameters from file
 	std::fstream parameters("parameters.txt", std::ios_base::in);
 	parameters >> imageH >> imageW >> X0_dia >>
-		          Xlength_dia >> Y0_dia >> Ylength_dia >>
-		          Threshold1 >> Threshold2 >>
-		          Morph_Operator_dia >> Morph_Elem_dia >> Morph_Size_dia >>
-				  Kernel_Size_dia >>
-		          Deform_Delay >>
-		          X0_def >> Xlength_def >> Y0_def >> Ylength_def >>
-		          Threshold_Deform >>
-		          Morph_Operator_def >> Morph_Elem_def >>
-		          Morph_Size_def;
+		Xlength_dia >> Y0_dia >> Ylength_dia >>
+		Threshold1 >> Threshold2 >>
+		Morph_Operator_dia >> Morph_Elem_dia >> Morph_Size_dia >>
+		Kernel_Size_dia >>
+		Deform_Delay >>
+		X0_def >> Xlength_def >> Y0_def >> Ylength_def >>
+		YM >> wall;
 
 	// Initialization for PhSDK
 	//PhRegisterClientEx(NULL, NULL, NULL, PHCONHEADERVERSION);
@@ -639,7 +635,7 @@ double Cyto::Deformation(int i)
 	Mat dimage;
 	equalizeHist(imcrop, dimage);
 
-	int ym = 15;  // window coordinate in y_middle
+	int ym = YM;  // window coordinate in y_middle
 	const int msize_b = 6; // length of intensity to get median of background intensity
 	const int msize_c = 3; // length of intensity to get median of cell intensity
 
@@ -660,19 +656,13 @@ double Cyto::Deformation(int i)
 	int backIntensity;  // backgroud intensity
 	backIntensity = GetMedian(I_b, msize_b);
 
-	// int cutIntensity = backIntensity * 1.25;
+	// change based on each experiment
 	int cutI = backIntensity * 0.3;
 	int upI = backIntensity * 0.7;
 
 
 
 	//X0_def, Y0_def, Xlength_def, Ylength_def
-	int xr1 = 109;  // window coordinate in x_right
-	int xL1 = 90;   // window coordinate in x_left
-	//int ym = 15;  // window coordinate in y_middle
-	int x1 = 100; // scan from left
-	int x2 = 0; // scan from right
-
 	double upX = 0; // position with upI
 	double loX = 0; // postion with lower Intensity
 	double cutX = 0; // position with cut Intensity
@@ -687,13 +677,8 @@ double Cyto::Deformation(int i)
 		I_c[0] = dimage.at<uchar>(ym, x);
 		I_c[1] = dimage.at<uchar>(ym - 1, x);
 		I_c[2] = dimage.at<uchar>(ym + 1, x);
-		//Scalar intensity4 = image.at<uchar>(ym - 2, x);
-		//Scalar intensity5 = image.at<uchar>(ym + 2, x);
-		//Scalar intensity6 = image.at<uchar>(ym - 3, x);
-		//Scalar intensity7 = image.at<uchar>(ym + 3, x);
 		th_t = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
-		//cout << "x = " << x << ", " << intensity1.val[0] << ", " << intensity2.val[0] << ", " << intensity3.val[0] << ", " << intensity4.val[0] << ", " << intensity5.val[0] << ", " << intensity6.val[0] << ", " << intensity7.val[0] << endl;
 
 		if (th_t < cutI)
 		{
@@ -708,11 +693,6 @@ double Cyto::Deformation(int i)
 			break;
 		}
 
-		//if (intensity1.val[0] > cutIntensity || intensity2.val[0] > cutIntensity || intensity3.val[0] > cutIntensity || intensity4.val[0] > cutIntensity ||
-		//	intensity5.val[0] > cutIntensity || intensity6.val[0] > cutIntensity || intensity7.val[0] > cutIntensity)
-		//{
-		//	cout << "0" << endl;
-		//}
 	}
 
 	//cout << "uX = " << loX - 1 << " ,th1 = " << th1 << endl;
@@ -730,7 +710,7 @@ double Cyto::Deformation(int i)
 	double realX = loX - deltaX; // real X
 	//cout << "realX = " << realX << endl;
 
-	int wall_x = 18; // wall position
+	int wall_x = wall; // wall position
 	int xm = (wall_x + loX) / 2;
 	//cout << "xm = " << xm << endl;
 
@@ -748,13 +728,8 @@ double Cyto::Deformation(int i)
 		I_c[0] = dimage.at<uchar>(y, xm);
 		I_c[1] = dimage.at<uchar>(y, xm + 1);
 		I_c[2] = dimage.at<uchar>(y, xm + 2);
-		//Scalar intensity4 = image.at<uchar>(ym - 2, x);
-		//Scalar intensity5 = image.at<uchar>(ym + 2, x);
-		//Scalar intensity6 = image.at<uchar>(ym - 3, x);
-		//Scalar intensity7 = image.at<uchar>(ym + 3, x);
 		th_tY1 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
-		//cout << "x = " << x << ", " << intensity1.val[0] << ", " << intensity2.val[0] << ", " << intensity3.val[0] << ", " << intensity4.val[0] << ", " << intensity5.val[0] << ", " << intensity6.val[0] << ", " << intensity7.val[0] << endl;
 
 		if (th_tY1 < cutI)
 		{
@@ -799,13 +774,8 @@ double Cyto::Deformation(int i)
 		I_c[0] = dimage.at<uchar>(y, xm);
 		I_c[1] = dimage.at<uchar>(y, xm + 1);
 		I_c[2] = dimage.at<uchar>(y, xm + 2);
-		//Scalar intensity4 = image.at<uchar>(ym - 2, x);
-		//Scalar intensity5 = image.at<uchar>(ym + 2, x);
-		//Scalar intensity6 = image.at<uchar>(ym - 3, x);
-		//Scalar intensity7 = image.at<uchar>(ym + 3, x);
 		th_tY2 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
-		//cout << "x = " << x << ", " << intensity1.val[0] << ", " << intensity2.val[0] << ", " << intensity3.val[0] << ", " << intensity4.val[0] << ", " << intensity5.val[0] << ", " << intensity6.val[0] << ", " << intensity7.val[0] << endl;
 
 		if (th_tY2 < cutI)
 		{
@@ -820,11 +790,6 @@ double Cyto::Deformation(int i)
 			break;
 		}
 
-		//if (intensity1.val[0] > cutIntensity || intensity2.val[0] > cutIntensity || intensity3.val[0] > cutIntensity || intensity4.val[0] > cutIntensity ||
-		//	intensity5.val[0] > cutIntensity || intensity6.val[0] > cutIntensity || intensity7.val[0] > cutIntensity)
-		//{
-		//	cout << "0" << endl;
-		//}
 	}
 
 	//cout << "uY2 = " << loY2 + 1 << " ,th1 = " << th1Y2 << endl;
@@ -863,8 +828,7 @@ double Cyto::Deformation(int i)
 	//cout << deform << endl;
 	return deform;
 	///
-	
-	///
+
 }
 
 
@@ -928,7 +892,6 @@ double Cyto::Centroid(int i)
 	vector<Vec4i> hierarchy;
 	IH imgHeader;
 	IMRANGE imrange;
-	//vector<unsigned char> cineData(imageH * imageW);
 
 	/// Read images
 	imrange.First = i;
@@ -938,10 +901,6 @@ double Cyto::Centroid(int i)
 	//imshow("imOrig", image);
 	Mat imcrop(image, Rect(X0_dia, Y0_dia, Xlength_dia, Ylength_dia));  // crop image (0, 0, 35, 26)
 	//imshow("imCrop", imcrop);
-
-	//int morph_operator = 1;
-	//int morph_elem = 2;
-	//int morph_size = 5;
 
 	int j = 0;
 	int k = 0;
