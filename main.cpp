@@ -89,10 +89,11 @@ private:
 	int from;
 	int to;
 
-	double* diameter;
+	double diameter;
 	double deform1;
 	double deform2;
 	double deformations;
+	double centroids;
 
 	CINEHANDLE cineHandle;
 	BITMAPINFOHEADER bitmapInfoHeader;
@@ -102,10 +103,12 @@ private:
 	ofstream sizefile, deformfile, centroidfile;
 	string filename_dia, filename_def, filename_cen;
 
-	double * Initial_Diameter(int i);
+	double Initial_Diameter(int i);
 	double Detect(int i);
 	double Deformation(int i);
 	int Detect_Def(int i);
+	double Centroid(int i);
+
 	Mat Morphology_Operations(Mat dst_binary, int morph_operator, int morph_elem, int morph_size);
 
 };
@@ -210,7 +213,7 @@ void Cyto::compute(int partNum, int ext)
 	// Output files
 	filename_dia = "diameters" + to_string(partNum) + ".txt";
 	filename_def = "deformations" + to_string(partNum) + ".txt";
-	filename_cen = "centroid" + to_string(partNum) + ".txt";
+	filename_cen = "centroids" + to_string(partNum) + ".txt";
 	sizefile.open(filename_dia);
 	deformfile.open(filename_def);
 	centroidfile.open(filename_cen);
@@ -230,7 +233,7 @@ void Cyto::compute(int partNum, int ext)
 		//	testfile_dia << i << ",  " << diameter << endl;
 		//}
 
-		if ((*diameter) != 0)   // if diameter is good
+		if (diameter != 0)   // if diameter is good
 
 		{
 			if (Detect_Def(i + 2) == 0)
@@ -286,11 +289,12 @@ void Cyto::compute(int partNum, int ext)
 			if (deform1 || deform2)
 			{
 				deformations = max(deform1, deform2);   // Store deformations 
+				centroids = Centroid(i);
 				//cout << "result: " << "i = " << i << ",   " << diameter; cout << ",   "; cout << deform1 << ",  " << deform2 << endl << endl;
 				//cout << ",   "; cout << i;  cout << '\n'; // Display the results
-				sizefile << *diameter << endl; // "i = " << i << ",   " << diameter << ",   " << deform1 << ",   " << deform2 << endl; // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
+				sizefile << diameter << endl; // "i = " << i << ",   " << diameter << ",   " << deform1 << ",   " << deform2 << endl; // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
 				deformfile << deformations << endl;
-				centroidfile << *(diameter + 1) << endl;
+				centroidfile << centroids << endl;
 			}
 
 			i = i + 3;
@@ -340,7 +344,7 @@ double Cyto::GetMedian(double daArray[], int iSize) {
 
 
 //
-double* Cyto::Initial_Diameter(int i)
+double Cyto::Initial_Diameter(int i)
 {
 	/// Variables
 	Mat dst_crop;
@@ -370,7 +374,7 @@ double* Cyto::Initial_Diameter(int i)
 	double area = 0.0;
 	double area_temp = 0.0;
 	double dia_temp = 0.0;
-	double equi_diameter[2] = { 0.0 }; // equi_diameter[0]: diameter; equi_diameter[0]: mc[0].y;
+	double equi_diameter = 0.0;
 
 	double lda1 = 0.0;
 	double lda2 = 0.0;
@@ -414,7 +418,7 @@ double* Cyto::Initial_Diameter(int i)
 	if (intensity1.val[0] || intensity2.val[0] || intensity3.val[0] || intensity4.val[0] || intensity5.val[0] || intensity6.val[0])
 	{
 		// Cell on right boundary
-		return equi_diameter;
+		return 0;
 	}
 
 
@@ -425,7 +429,7 @@ double* Cyto::Initial_Diameter(int i)
 
 	if (contours.size() == 0)
 	{
-		return equi_diameter;
+		return 0;
 	}
 
 	
@@ -459,7 +463,7 @@ double* Cyto::Initial_Diameter(int i)
 	{
 		if (contours[j][m].y < (Y0_dia + 3) || contours[j][m].y > (Y0_dia + Ylength_dia - 3)) // (1, 35)
 		{
-			return equi_diameter;
+			return 0;
 		}
 	}
 	
@@ -471,7 +475,7 @@ double* Cyto::Initial_Diameter(int i)
 
 	// Get the mass centers:
 	mc[0] = Point2f(mu[0].m10 / mu[0].m00, mu[0].m01 / mu[0].m00);
-	equi_diameter[1] = mc[0].y;
+
 
 	// Get eigenvalues
 	mup20 = mu[0].m20 / mu[0].m00 - pow(mc[0].x, 2);
@@ -484,19 +488,17 @@ double* Cyto::Initial_Diameter(int i)
 	Ecc = sqrt(1 - lda2 / lda1);
 	//cout << "ECC = " << Ecc << endl;
 	// Get quivalent diameter
-	equi_diameter[0] = sqrt(4 * area / PI) / 0.56;
+	equi_diameter = sqrt(4 * area / PI) / 0.56;
 
-	if (equi_diameter[0] < 6) //10
+	if (equi_diameter < 6) //10
 	{
-		equi_diameter[0] = 0;
-		return equi_diameter;
+		return 0;
 	}
 
 	if (Ecc > 0.75)
 	{
 		//cout << "Ecc= " << Ecc << endl;
-		equi_diameter[0] = 0;
-		return equi_diameter;
+		return 0;
 	}
 
 	// Store initial dimeter
@@ -912,6 +914,104 @@ int Cyto::Detect_Def(int i)
 
 	return 1;
 }
+
+
+
+//
+double Cyto::Centroid(int i)
+{
+	/// Variables
+	Mat dst_crop;
+	Mat dst_binary;
+	Mat dst_morph;
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	IH imgHeader;
+	IMRANGE imrange;
+	//vector<unsigned char> cineData(imageH * imageW);
+
+	/// Read images
+	imrange.First = i;
+	imrange.Cnt = 1;
+	PhGetCineImage(cineHandle, (PIMRANGE)&imrange, m_pImageBuffer, imgSizeInBytes, (PIH)&imgHeader);
+	Mat image = Mat(imageH, imageW, CV_8U, m_pImageBuffer);
+	//imshow("imOrig", image);
+	Mat imcrop(image, Rect(X0_dia, Y0_dia, Xlength_dia, Ylength_dia));  // crop image (0, 0, 35, 26)
+	//imshow("imCrop", imcrop);
+
+	//int morph_operator = 1;
+	//int morph_elem = 2;
+	//int morph_size = 5;
+
+	int j = 0;
+	int k = 0;
+	double area = 0.0;
+	double area_temp = 0.0;
+	double dia_temp = 0.0;
+	double centroid = 0.0;
+
+	double lda1 = 0.0;
+	double lda2 = 0.0;
+	double mup20 = 0.0;
+	double mup02 = 0.0;
+	double mup11 = 0.0;
+	double Ecc = 0.0;
+	///
+
+	/*Initial Diameter*/
+	///
+	// Image Processing
+	medianBlur(imcrop, dst_crop, Kernel_Size_dia);
+	adaptiveThreshold(dst_crop, dst_binary, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY_INV, Threshold1, Threshold2); //(7,3)
+	dst_morph = Morphology_Operations(dst_binary, Morph_Operator_dia, Morph_Elem_dia, Morph_Size_dia);
+
+	// Find contours
+	findContours(dst_morph, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+	//cout << "contour = " << contours.size() << endl;
+
+	//  Get Max area
+	for (int j_temp = 0; j_temp < contours.size(); j_temp++)
+	{
+		area_temp = contourArea(contours[j_temp]);
+		dia_temp = sqrt(4 * area_temp / PI) / 0.56;
+		//cout << "dia_temp=" << dia_temp << endl;
+		if (dia_temp > 5)
+		{
+			k = k + 1;
+			if (k > 1)
+			{
+				//cout << "multiple cell" << endl;
+				return 0;
+			}
+		}
+		if (area_temp > area)
+		{
+			area = area_temp;
+			j = j_temp;
+		}
+	}
+
+
+	// Get the moments
+	vector<Moments> mu(1);
+	vector<Point2f> mc(1);
+	mu[0] = moments(contours[j], true);
+
+	// Get the mass centers:
+	mc[0] = Point2f(mu[0].m10 / mu[0].m00, mu[0].m01 / mu[0].m00);
+
+
+    // Get centroid
+	centroid = mc[0].y;
+
+	return centroid;
+	///
+}
+
+
+
+
 
 /*@function Morphology_Operations*/
 Mat Cyto::Morphology_Operations(Mat dst_binary, int morph_operator, int morph_elem, int morph_size)
