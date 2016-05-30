@@ -89,7 +89,7 @@ private:
 	int from;
 	int to;
 
-	double diameter;
+	double* diameter;
 	double deform1;
 	double deform2;
 	double deformations;
@@ -99,10 +99,10 @@ private:
 	UINT imgSizeInBytes;
 	PBYTE m_pImageBuffer;
 
-	ofstream sizefile, deformfile;
-	string filename_dia, filename_def;
+	ofstream sizefile, deformfile, centroidfile;
+	string filename_dia, filename_def, filename_cen;
 
-	double Initial_Diameter(int i);
+	double * Initial_Diameter(int i);
 	double Detect(int i);
 	double Deformation(int i);
 	int Detect_Def(int i);
@@ -210,8 +210,10 @@ void Cyto::compute(int partNum, int ext)
 	// Output files
 	filename_dia = "diameters" + to_string(partNum) + ".txt";
 	filename_def = "deformations" + to_string(partNum) + ".txt";
+	filename_cen = "centroid" + to_string(partNum) + ".txt";
 	sizefile.open(filename_dia);
 	deformfile.open(filename_def);
+	centroidfile.open(filename_cen);
 	
 	from = image1 + (partNum - 1) / 8.0 * imageN;   //change number according to the thread number
 	to = image1 + partNum / 8.0 * imageN + ext;
@@ -228,7 +230,7 @@ void Cyto::compute(int partNum, int ext)
 		//	testfile_dia << i << ",  " << diameter << endl;
 		//}
 
-		if (diameter != 0)   // if diameter is good
+		if ((*diameter) != 0)   // if diameter is good
 
 		{
 			if (Detect_Def(i + 2) == 0)
@@ -286,8 +288,9 @@ void Cyto::compute(int partNum, int ext)
 				deformations = max(deform1, deform2);   // Store deformations 
 				//cout << "result: " << "i = " << i << ",   " << diameter; cout << ",   "; cout << deform1 << ",  " << deform2 << endl << endl;
 				//cout << ",   "; cout << i;  cout << '\n'; // Display the results
-				sizefile << diameter << endl; // "i = " << i << ",   " << diameter << ",   " << deform1 << ",   " << deform2 << endl; // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
-				deformfile << deformations << endl;;
+				sizefile << *diameter << endl; // "i = " << i << ",   " << diameter << ",   " << deform1 << ",   " << deform2 << endl; // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
+				deformfile << deformations << endl;
+				centroidfile << *(diameter + 1) << endl;
 			}
 
 			i = i + 3;
@@ -296,6 +299,7 @@ void Cyto::compute(int partNum, int ext)
 
 	sizefile.close();
 	deformfile.close();
+	centroidfile.close();
 
 	//waitKey(0);
 }
@@ -336,7 +340,7 @@ double Cyto::GetMedian(double daArray[], int iSize) {
 
 
 //
-double Cyto::Initial_Diameter(int i)
+double* Cyto::Initial_Diameter(int i)
 {
 	/// Variables
 	Mat dst_crop;
@@ -366,7 +370,7 @@ double Cyto::Initial_Diameter(int i)
 	double area = 0.0;
 	double area_temp = 0.0;
 	double dia_temp = 0.0;
-	double equi_diameter = 0.0;
+	double equi_diameter[2] = { 0.0 }; // equi_diameter[0]: diameter; equi_diameter[0]: mc[0].y;
 
 	double lda1 = 0.0;
 	double lda2 = 0.0;
@@ -410,7 +414,7 @@ double Cyto::Initial_Diameter(int i)
 	if (intensity1.val[0] || intensity2.val[0] || intensity3.val[0] || intensity4.val[0] || intensity5.val[0] || intensity6.val[0])
 	{
 		// Cell on right boundary
-		return 0;
+		return equi_diameter;
 	}
 
 
@@ -421,7 +425,7 @@ double Cyto::Initial_Diameter(int i)
 
 	if (contours.size() == 0)
 	{
-		return 0;
+		return equi_diameter;
 	}
 
 	
@@ -455,7 +459,7 @@ double Cyto::Initial_Diameter(int i)
 	{
 		if (contours[j][m].y < (Y0_dia + 3) || contours[j][m].y > (Y0_dia + Ylength_dia - 3)) // (1, 35)
 		{
-			return 0;
+			return equi_diameter;
 		}
 	}
 	
@@ -467,7 +471,7 @@ double Cyto::Initial_Diameter(int i)
 
 	// Get the mass centers:
 	mc[0] = Point2f(mu[0].m10 / mu[0].m00, mu[0].m01 / mu[0].m00);
-
+	equi_diameter[1] = mc[0].y;
 
 	// Get eigenvalues
 	mup20 = mu[0].m20 / mu[0].m00 - pow(mc[0].x, 2);
@@ -480,17 +484,19 @@ double Cyto::Initial_Diameter(int i)
 	Ecc = sqrt(1 - lda2 / lda1);
 	//cout << "ECC = " << Ecc << endl;
 	// Get quivalent diameter
-	equi_diameter = sqrt(4 * area / PI) / 0.56;
+	equi_diameter[0] = sqrt(4 * area / PI) / 0.56;
 
-	if (equi_diameter < 6) //10
+	if (equi_diameter[0] < 6) //10
 	{
-		return 0;
+		equi_diameter[0] = 0;
+		return equi_diameter;
 	}
 
 	if (Ecc > 0.75)
 	{
 		//cout << "Ecc= " << Ecc << endl;
-		return 0;
+		equi_diameter[0] = 0;
+		return equi_diameter;
 	}
 
 	// Store initial dimeter
