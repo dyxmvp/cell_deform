@@ -19,6 +19,8 @@
 //1. Further improve the rule out the close cells
 //2. Use class to simplied the code
 
+/************** Master Version *********************/
+
 #include "stdafx.h"
 #include "PhCon.h"
 #include "PhInt.h"
