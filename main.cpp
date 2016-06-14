@@ -659,7 +659,8 @@ double Cyto::Deformation(int i)
 	backIntensity = GetMedian(I_b, msize_b);
 
 	// change based on each experiment
-	int cutI = backIntensity * 0.3;
+	int cutI = backIntensity * 0.3;      // Minor cut
+	int cutI_M = backIntensity * 0.35;    // Major cut
 	int upI = backIntensity * 0.7;
 
 
@@ -734,7 +735,7 @@ double Cyto::Deformation(int i)
 		th_tY1 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
 
-		if (th_tY1 < cutI)
+		if (th_tY1 < cutI_M)
 		{
 			loY1 = y;
 			th2Y1 = th_tY1;
@@ -752,7 +753,7 @@ double Cyto::Deformation(int i)
 	//cout << "lY = " << loY1 << " ,th2 = " << th2Y1 << endl;
 
 	double deltaY1 = 0.0; // delta y
-	deltaY1 = (cutI * 1.5 - th2Y1) / (th1Y1 - th2Y1);
+	deltaY1 = (cutI_M - th2Y1) / (th1Y1 - th2Y1);
 	//cout << "deltaY1 = " << deltaY1 << endl;
 
 	if ((th1Y1 - th2Y1) == 0)
@@ -780,7 +781,7 @@ double Cyto::Deformation(int i)
 		th_tY2 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
 
-		if (th_tY2 < cutI)
+		if (th_tY2 < cutI_M)
 		{
 			loY2 = y;
 			th2Y2 = th_tY2;
@@ -799,7 +800,7 @@ double Cyto::Deformation(int i)
 	//cout << "lY2 = " << loY2 << " ,th2 = " << th2Y2 << endl;
 
 	double deltaY2 = 0; // delta x
-	deltaY2 = (cutI * 1.5 - th2Y2) / (th1Y2 - th2Y2);
+	deltaY2 = (cutI_M - th2Y2) / (th1Y2 - th2Y2);
 	
 	if ((th1Y2 - th2Y2) == 0)
 	{
