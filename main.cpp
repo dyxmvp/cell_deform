@@ -674,6 +674,7 @@ double Cyto::Deformation(int i)
 	double th2 = 0; // small threshold to find boundary
 	double I_c[msize_c] = { 0 }; // intensity to find cells
 
+	// Look for minor axis
 	for (int x = 0; x <= Xlength_def; x++)
 	{
 		I_c[0] = dimage.at<uchar>(ym, x);
@@ -709,14 +710,14 @@ double Cyto::Deformation(int i)
 		return 0;
 	}
 
-	double realX = loX - deltaX; // real X
+	double realX = loX;// -deltaX; // real X
 	//cout << "realX = " << realX << endl;
 
 	int wall_x = wall; // wall position
 	int xm = (wall_x + loX) / 2;
 	//cout << "xm = " << xm << endl;
 
-
+	// Look for major axis
 	double th_tY1 = 0.0; // temp threshold to find boundary
 	double th1Y1 = 0.0; // large threshold to find boundary
 	double th2Y1 = 0.0; // small threshold to find boundary
@@ -729,7 +730,7 @@ double Cyto::Deformation(int i)
 	{
 		I_c[0] = dimage.at<uchar>(y, xm);
 		I_c[1] = dimage.at<uchar>(y, xm + 1);
-		I_c[2] = dimage.at<uchar>(y, xm + 2);
+		I_c[2] = dimage.at<uchar>(y, xm - 1);
 		th_tY1 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
 
@@ -751,7 +752,7 @@ double Cyto::Deformation(int i)
 	//cout << "lY = " << loY1 << " ,th2 = " << th2Y1 << endl;
 
 	double deltaY1 = 0.0; // delta y
-	deltaY1 = (cutI - th2Y1) / (th1Y1 - th2Y1);
+	deltaY1 = (cutI * 1.5 - th2Y1) / (th1Y1 - th2Y1);
 	//cout << "deltaY1 = " << deltaY1 << endl;
 
 	if ((th1Y1 - th2Y1) == 0)
@@ -775,7 +776,7 @@ double Cyto::Deformation(int i)
 	{
 		I_c[0] = dimage.at<uchar>(y, xm);
 		I_c[1] = dimage.at<uchar>(y, xm + 1);
-		I_c[2] = dimage.at<uchar>(y, xm + 2);
+		I_c[2] = dimage.at<uchar>(y, xm - 1);
 		th_tY2 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
 
@@ -798,7 +799,7 @@ double Cyto::Deformation(int i)
 	//cout << "lY2 = " << loY2 << " ,th2 = " << th2Y2 << endl;
 
 	double deltaY2 = 0; // delta x
-	deltaY2 = (cutI - th2Y2) / (th1Y2 - th2Y2);
+	deltaY2 = (cutI * 1.5 - th2Y2) / (th1Y2 - th2Y2);
 	
 	if ((th1Y2 - th2Y2) == 0)
 	{
@@ -849,13 +850,13 @@ int Cyto::Detect_Def(int i)
 	PhGetCineImage(cineHandle, (PIMRANGE)&imrange, m_pImageBuffer, imgSizeInBytes, (PIH)&imgHeader);
 	Mat image = Mat(imageH, imageW, CV_8U, m_pImageBuffer);
 
-	int backIntensity = 68;  // backgroud intensity (MMM)
+	int backIntensity = 60;  // backgroud intensity (MMM)
 	int xr = 110;  // window coordinate in x_right
 	
 	int cutIntensity = backIntensity * 1.25;   
 
 	int xL = 90;   // window coordinate in x_left
-	int ym = 15;  // window coordinate in y_middle
+	int ym = YM;  // window coordinate in y_middle
 	int x1 = 100; // scan from left
 	int x2 = 0; // scan from right
 
