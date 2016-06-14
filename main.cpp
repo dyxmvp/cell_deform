@@ -290,8 +290,8 @@ void Cyto::compute(int partNum, int ext)
 				centroids = Centroid(i);
 				//cout << "result: " << "i = " << i << ",   " << diameter; cout << ",   "; cout << deform1 << ",  " << deform2 << endl << endl;
 				//cout << ",   "; cout << i;  cout << '\n'; // Display the results
-				sizefile << diameter << endl;  // i << ",   " << diameter << endl;  // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
-				deformfile << deformations << endl; // deform1 << ",   " << deform2 << endl;
+				sizefile << i << ",   " << diameter << endl;  // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
+				deformfile << deform1 << ",   " << deform2 << endl;
 				centroidfile << centroids << endl;
 			}
 
