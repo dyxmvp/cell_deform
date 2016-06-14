@@ -290,8 +290,8 @@ void Cyto::compute(int partNum, int ext)
 				centroids = Centroid(i);
 				//cout << "result: " << "i = " << i << ",   " << diameter; cout << ",   "; cout << deform1 << ",  " << deform2 << endl << endl;
 				//cout << ",   "; cout << i;  cout << '\n'; // Display the results
-				sizefile << i << ",   " << diameter << endl;  // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
-				deformfile << deform1 << ",   " << deform2 << endl;
+				sizefile << diameter << endl;  // i << ",   " << diameter << endl;  // "\t" << deformations[i - 1] << "\t" << i + 8 << '\t' << i + 9 << endl;
+				deformfile << deformations << endl; // deform1 << ",   " << deform2 << endl;
 				centroidfile << centroids << endl;
 			}
 
@@ -660,6 +660,7 @@ double Cyto::Deformation(int i)
 
 	// change based on each experiment
 	int cutI = backIntensity * 0.3;
+	int cutI_M = backIntensity * 0.35;
 	int upI = backIntensity * 0.7;
 
 
@@ -709,7 +710,7 @@ double Cyto::Deformation(int i)
 		return 0;
 	}
 
-	double realX = loX - deltaX; // real X
+	double realX = loX; //-deltaX; // real X
 	//cout << "realX = " << realX << endl;
 
 	int wall_x = wall; // wall position
@@ -729,11 +730,11 @@ double Cyto::Deformation(int i)
 	{
 		I_c[0] = dimage.at<uchar>(y, xm);
 		I_c[1] = dimage.at<uchar>(y, xm + 1);
-		I_c[2] = dimage.at<uchar>(y, xm + 2);
+		I_c[2] = dimage.at<uchar>(y, xm - 1);
 		th_tY1 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
 
-		if (th_tY1 < cutI)
+		if (th_tY1 < cutI_M)
 		{
 			loY1 = y;
 			th2Y1 = th_tY1;
@@ -751,7 +752,7 @@ double Cyto::Deformation(int i)
 	//cout << "lY = " << loY1 << " ,th2 = " << th2Y1 << endl;
 
 	double deltaY1 = 0.0; // delta y
-	deltaY1 = (cutI - th2Y1) / (th1Y1 - th2Y1);
+	deltaY1 = (cutI_M - th2Y1) / (th1Y1 - th2Y1);
 	//cout << "deltaY1 = " << deltaY1 << endl;
 
 	if ((th1Y1 - th2Y1) == 0)
@@ -775,11 +776,11 @@ double Cyto::Deformation(int i)
 	{
 		I_c[0] = dimage.at<uchar>(y, xm);
 		I_c[1] = dimage.at<uchar>(y, xm + 1);
-		I_c[2] = dimage.at<uchar>(y, xm + 2);
+		I_c[2] = dimage.at<uchar>(y, xm - 1);
 		th_tY2 = GetMedian(I_c, msize_c);
 		//cout << cutIntensity << endl;
 
-		if (th_tY2 < cutI)
+		if (th_tY2 < cutI_M)
 		{
 			loY2 = y;
 			th2Y2 = th_tY2;
@@ -798,7 +799,7 @@ double Cyto::Deformation(int i)
 	//cout << "lY2 = " << loY2 << " ,th2 = " << th2Y2 << endl;
 
 	double deltaY2 = 0; // delta x
-	deltaY2 = (cutI - th2Y2) / (th1Y2 - th2Y2);
+	deltaY2 = (cutI_M - th2Y2) / (th1Y2 - th2Y2);
 	
 	if ((th1Y2 - th2Y2) == 0)
 	{
@@ -849,7 +850,7 @@ int Cyto::Detect_Def(int i)
 	PhGetCineImage(cineHandle, (PIMRANGE)&imrange, m_pImageBuffer, imgSizeInBytes, (PIH)&imgHeader);
 	Mat image = Mat(imageH, imageW, CV_8U, m_pImageBuffer);
 
-	int backIntensity = 68;  // backgroud intensity (MMM)
+	int backIntensity = 60;  // backgroud intensity (MMM)
 	int xr = 110;  // window coordinate in x_right
 	
 	int cutIntensity = backIntensity * 1.25;   
